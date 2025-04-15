@@ -2,8 +2,9 @@ import os
 import cv2
 import time
 import RPi.GPIO as GPIO
-
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+import threading
+import http.server
+import socketserver
 
 
 # GPIO pin setup
@@ -33,6 +34,21 @@ out = None
 script_dir = os.path.dirname(os.path.abspath(__file__))
 evidence_dir = os.path.join(script_dir, 'evidence')
 
+# HTTP Server setup
+PORT = 8000
+Handler = http.server.SimpleHTTPRequestHandler
+
+# Custom handler to serve files from the evidence directory
+class EvidenceHandler(Handler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=evidence_dir, **kwargs)
+
+# Function to start the HTTP server
+def start_http_server():
+    with socketserver.TCPServer(("", PORT), EvidenceHandler) as httpd:
+        print(f"Serving HTTP on port {PORT} at http://localhost:{PORT}")
+        httpd.serve_forever()
+
 # turn on the laser and then capture the reading
 # this prevents the laser sensor module capacitor 
 # from being charged completely.
@@ -58,6 +74,9 @@ def buzz(state):
 # not when this main.py is imported 
 if __name__=="__main__":
     try:
+        # Start HTTP server in a separate thread
+        http_thread = threading.Thread(target=start_http_server, daemon=True)
+        http_thread.start()
         # check if camera capture stream could be opened
         if not cap.isOpened():
             print("Error: Could not open webcam")
@@ -100,3 +119,7 @@ if __name__=="__main__":
         # release camera resources
         cap.release()
         print("Camera released.")
+        # close the evidence website
+        # Stop the HTTP server
+        http_thread.join(timeout=1.0)  # Wait for thread to terminate
+        print("HTTP server stopped.")

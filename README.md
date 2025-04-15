@@ -34,3 +34,11 @@ You cannot view it when the main script's execution has been stopped.
     <code>cd ~/Repos/laser-security-system/evidence</code>
 3. Delete all the stored photos :
     <code>rm -r \*.jpg </code>
+
+## Running the same code on new Raspberry pi
+1. Create a python environment :
+    <code>python -m venv laser-security-system</code>
+2. Activate the environment :
+    <code>source laser-security-system/bin/activate</code>
+3. Install the requirements :
+    <code>pip install -r requirements.txt</code>

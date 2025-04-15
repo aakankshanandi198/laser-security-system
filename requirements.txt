@@ -1,0 +1,4 @@
+lgpio==0.2.2.0
+numpy==2.2.4
+opencv-python==4.11.0.86
+rpi-lgpio==0.6

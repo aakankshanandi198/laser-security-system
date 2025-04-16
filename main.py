@@ -99,7 +99,7 @@ if __name__=="__main__":
             if value == 0 and state == 0:
                 print("Laser not detected! Activating alarm...\n")
                 state = 1
-                #buzz(state)
+                buzz(state)
                 # prep camera output stream
                 timestamp =  time.strftime("%Y%m%d-%H%M%S")
                 filename = os.path.join(evidence_dir,f"suspect_{timestamp}.jpg")
@@ -109,7 +109,7 @@ if __name__=="__main__":
             elif value == 1 and state == 1:
                 print("Laser detected\n")
                 state = 0
-                #buzz(0)
+                buzz(state)
     except KeyboardInterrupt:
         print("Program terminated by user\n")
     finally:

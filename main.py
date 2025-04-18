@@ -18,6 +18,9 @@ GPIO.setup(BUZZER_PIN, GPIO.OUT)
 GPIO.setup(LASER_EMITTER_PIN, GPIO.OUT)
 GPIO.setup(LASER_SENSOR_PIN, GPIO.IN)
 
+# setup laser debounce counter
+debounce_counter = 0
+
 # Setup camera capture stream
 # 0 refer to the first connected camera
 cap = cv2.VideoCapture(0)
@@ -27,7 +30,7 @@ frame_width = int(cap.get(3))
 frame_height = int(cap.get(4))
 # var to hold frames from camera 
 frame = None
-# var to hold camer output stream
+# var to hold camera output stream
 out = None
 
 # Get parent directory of the script
@@ -55,14 +58,17 @@ def start_http_server():
 # hack to allow us use a 5v laser sensor with 3v3 volt
 # return 0 when line-break and 1 when laser is detected
 def read_sensor():
-	GPIO.output(LASER_EMITTER_PIN, GPIO.HIGH)
-	time.sleep(0.05)
-    # sensor returns 1 when line broken and 0 when lser is detected
-    # hence invert the logic
-	value = 0 if GPIO.input(LASER_SENSOR_PIN) else 1
-	GPIO.output(LASER_EMITTER_PIN,GPIO.LOW)
-	return value
-	
+    time.sleep(0.05)
+    if(GPIO.input(LASER_SENSOR_PIN)==1):
+        debounce_counter+=1
+        if(debounce_counter>10):
+            value = 1
+            debounce_counter = 0
+    else:  
+        debounce_counter = 0
+        value = 0
+    return value
+
 def buzz(state):
     if state:
         # buzzer buzzes when signal is low
@@ -74,6 +80,8 @@ def buzz(state):
 # not when this main.py is imported 
 if __name__=="__main__":
     try:
+        # start the laser emitter
+        GPIO.output(LASER_EMITTER_PIN, GPIO.HIGH)
         # Start HTTP server in a separate thread
         http_thread = threading.Thread(target=start_http_server, daemon=True)
         http_thread.start()
@@ -113,6 +121,8 @@ if __name__=="__main__":
     except KeyboardInterrupt:
         print("Program terminated by user\n")
     finally:
+        #stop laser emitter
+        GPIO.output(LASER_EMITTER_PIN, GPIO.LOW)
         # cleanup GPIO
         GPIO.cleanup()
         print("GPIO cleaned up.")

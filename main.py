@@ -10,12 +10,10 @@ import socketserver
 # GPIO pin setup
 BUZZER_PIN = 26
 LASER_SENSOR_PIN = 5
-LASER_EMITTER_PIN = 13
 
 # Setup GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BUZZER_PIN, GPIO.OUT)
-GPIO.setup(LASER_EMITTER_PIN, GPIO.OUT)
 GPIO.setup(LASER_SENSOR_PIN, GPIO.IN)
 
 # setup laser debounce counter
@@ -52,20 +50,24 @@ def start_http_server():
         print(f"Serving HTTP on port {PORT} at http://localhost:{PORT}")
         httpd.serve_forever()
 
-# turn on the laser and then capture the reading
-# this prevents the laser sensor module capacitor 
-# from being charged completely.
+
 # hack to allow us use a 5v laser sensor with 3v3 volt
 # return 0 when line-break and 1 when laser is detected
 def read_sensor():
     time.sleep(0.05)
-    if(GPIO.input(LASER_SENSOR_PIN)==1):
+    global debounce_counter
+    # the laser sensor is active low
+    if(GPIO.input(LASER_SENSOR_PIN)==0):
         debounce_counter+=1
+        # return 1 when laser is detected consistently for 10 times
         if(debounce_counter>10):
             value = 1
-            debounce_counter = 0
-    else:  
+        # else return 0 meaning laser is not detected, until the debounce counter reaches the threashold
+        value = 0
+    else:
+        # reset the debounce counter if laser is not detected 
         debounce_counter = 0
+        # return 0 when laser is not detected
         value = 0
     return value
 
@@ -80,8 +82,6 @@ def buzz(state):
 # not when this main.py is imported 
 if __name__=="__main__":
     try:
-        # start the laser emitter
-        GPIO.output(LASER_EMITTER_PIN, GPIO.HIGH)
         # Start HTTP server in a separate thread
         http_thread = threading.Thread(target=start_http_server, daemon=True)
         http_thread.start()
@@ -121,8 +121,6 @@ if __name__=="__main__":
     except KeyboardInterrupt:
         print("Program terminated by user\n")
     finally:
-        #stop laser emitter
-        GPIO.output(LASER_EMITTER_PIN, GPIO.LOW)
         # cleanup GPIO
         GPIO.cleanup()
         print("GPIO cleaned up.")
@@ -130,6 +128,5 @@ if __name__=="__main__":
         cap.release()
         print("Camera released.")
         # close the evidence website
-        # Stop the HTTP server
         http_thread.join(timeout=1.0)  # Wait for thread to terminate
         print("HTTP server stopped.")

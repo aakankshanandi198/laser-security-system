@@ -102,10 +102,10 @@ if __name__=="__main__":
         # check if evidence folder exists, if not create it
         if not os.path.exists(evidence_dir):
             os.makedirs(evidence_dir)
-            if not os.path.exists(os.path.join(evidence_dir,"photos")):
-                os.makedirs(os.path.join(evidence_dir,"photos"))
-            if not os.path.exists(os.path.join(evidence_dir,"videos")):
-                os.makedirs(os.path.join(evidence_dir,"videos"))
+        if not os.path.exists(os.path.join(evidence_dir,"photos")):
+            os.makedirs(os.path.join(evidence_dir,"photos"))
+        if not os.path.exists(os.path.join(evidence_dir,"videos")):
+            os.makedirs(os.path.join(evidence_dir,"videos"))
         # Create a csv files to record the events
         if not os.path.exists(os.path.join(evidence_dir,"events.csv")):
             with open(os.path.join(evidence_dir,"events.csv"),'w') as f:
@@ -134,7 +134,7 @@ if __name__=="__main__":
                 print("PIR sensor detected motion! Starting camera...\n")
                 # start camera capture stream
                 timestamp = time.strftime("%Y%m%d-%H%M%S")
-                video_filename = os.path.join(evidence_dir+"/videos", f"video_{timestamp}.avi")
+                video_filename = os.path.join(evidence_dir,"videos", f"video_{timestamp}.avi")
                 out = cv2.VideoWriter(video_filename, fourcc, fps, (frame_width, frame_height))
                 camera_state = 1
             # when PIR sensor does not detect motion and camera is capturing
@@ -154,7 +154,7 @@ if __name__=="__main__":
                 buzz(buzzer_state)
                 # prep camera output stream
                 timestamp =  time.strftime("%Y%m%d-%H%M%S")
-                image_filename = os.path.join(evidence_dir+"/photos",f"suspect_{timestamp}.jpg")
+                image_filename = os.path.join(evidence_dir,"photos",f"suspect_{timestamp}.jpg")
                 cv2.imwrite(image_filename,frame)
                 # record the event 
                 event_file.write(str(timestamp)+", 1, "+str(pir_sensor_value)+", "+str(image_filename)+", "+str(video_filename)+"\n")

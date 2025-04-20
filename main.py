@@ -10,14 +10,16 @@ import socketserver
 # GPIO pin setup
 BUZZER_PIN = 26
 LASER_SENSOR_PIN = 5
+PIR_SENSOR_PIN = 27
 
 # Setup GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(BUZZER_PIN, GPIO.OUT)
 GPIO.setup(LASER_SENSOR_PIN, GPIO.IN)
+GPIO.setup(PIR_SENSOR_PIN, GPIO.IN)
 
 # setup laser debounce counter
-debounce_counter = 0
+laser_debounce_counter = 0
 
 # Setup camera capture stream
 # 0 refer to the first connected camera
@@ -53,24 +55,33 @@ def start_http_server():
 
 # hack to allow us use a 5v laser sensor with 3v3 volt
 # return 0 when line-break and 1 when laser is detected
-def read_sensor():
+def read_laser_sensor():
     time.sleep(0.05)
-    global debounce_counter
+    global laser_debounce_counter
     # the laser sensor is active low
     if(GPIO.input(LASER_SENSOR_PIN)==0):
-        debounce_counter+=1
+        laser_debounce_counter+=1
         # return 1 when laser is detected consistently for 10 times
-        if(debounce_counter>10):
+        if(laser_debounce_counter>10):
             value = 1
         # else return 0 meaning laser is not detected, until the debounce counter reaches the threashold
         else:
             value = 0
     else:
         # reset the debounce counter if laser is not detected 
-        debounce_counter = 0
+        laser_debounce_counter = 0
         # return 0 when laser is not detected
         value = 0
     return value
+
+def read_pir_sensor():
+    time.sleep(0.05)
+    global laser_debounce_counter
+    # the laser sensor is active low
+    if(GPIO.input(PIR_SENSOR_PIN)==0):
+        print("PIR sensor returned 0")
+    if(GPIO.input(PIR_SENSOR_PIN)==1):
+        print("PIR sensor returned 1")
 
 def buzz(state):
     if state:
@@ -96,29 +107,30 @@ if __name__=="__main__":
         # Initialize system state and print startup message
         print("Laser detection started, Press Ctrl+C to stop.\n")
         # state var decides when buzz + camera should start/stop
-        state = 0
+        buzzer_state = 0
         # Start camera rolling
         _, frame = cap.read()
         # Execute the below code until ctrl+C is not pressed
         while True:
-            value = read_sensor()
-            print("laser sensor value is "+str(value)+" state value "+str(state)+"\n")
+            read_pir_sensor()
+            laser_sensor_value = read_laser_sensor()
+            print("laser sensor value is "+str(laser_sensor_value)+" buzzer state value "+str(buzzer_state)+"\n")
             # sensor detected line break and was not capturing/buzzing
             # start buzzing and capturing
-            if value == 0 and state == 0:
+            if laser_sensor_value == 0 and buzzer_state == 0:
                 print("Laser not detected! Activating alarm...\n")
-                state = 1
-                buzz(state)
+                buzzer_state = 1
+                buzz(buzzer_state)
                 # prep camera output stream
                 timestamp =  time.strftime("%Y%m%d-%H%M%S")
                 filename = os.path.join(evidence_dir,f"suspect_{timestamp}.jpg")
                 cv2.imwrite(filename,frame)
             # sensor detected back laser but was capturing/buzzing
             # stop buzzing and capturing, write capture frames
-            elif value == 1 and state == 1:
+            elif laser_sensor_value == 1 and buzzer_state == 1:
                 print("Laser detected\n")
-                state = 0
-                buzz(state)
+                buzzer_state = 0
+                buzz(buzzer_state)
     except KeyboardInterrupt:
         print("Program terminated by user\n")
     finally:

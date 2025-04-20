@@ -118,10 +118,11 @@ if __name__=="__main__":
         buzzer_state = 0
         # state var decides when camera should start/stop
         camera_state = 0
-        # Start camera rolling
-        _, frame = cap.read()
+        
         # Execute the below code until ctrl+C is not pressed
         while True:
+            # Start camera rolling
+            _, frame = cap.read()
             pir_sensor_value = read_pir_sensor()
             laser_sensor_value = read_laser_sensor()
             print("PIR sensor value is "+str(pir_sensor_value)+" camera state value is "+str(laser_sensor_value))
@@ -129,14 +130,18 @@ if __name__=="__main__":
             
             # when PIR sensor detects motion and camera is not capturing
             # start camera capture stream
-            
             if pir_sensor_value == 1 and camera_state == 0:
                 print("PIR sensor detected motion! Starting camera...\n")
-                # start camera capture stream
+                # start video recording
                 timestamp = time.strftime("%Y%m%d-%H%M%S")
                 video_filename = os.path.join(evidence_dir,"videos", f"video_{timestamp}.avi")
                 out = cv2.VideoWriter(video_filename, fourcc, fps, (frame_width, frame_height))
                 camera_state = 1
+            elif pir_sensor_value == 1 and camera_state == 1:
+                # camera is already capturing
+                print("Camera is already capturing\n")
+                # write the frame to the output strea
+                out.write(frame)
             # when PIR sensor does not detect motion and camera is capturing
             # stop camera capture stream
             elif pir_sensor_value == 0 and camera_state == 1:

@@ -28,6 +28,7 @@ cap = cv2.VideoCapture(0)
 fps = 10
 frame_width = int(cap.get(3))
 frame_height = int(cap.get(4))
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
 # var to hold frames from camera 
 frame = None
 # var to hold camera output stream
@@ -36,6 +37,7 @@ out = None
 # Get parent directory of the script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 evidence_dir = os.path.join(script_dir, 'evidence')
+event_file = None
 
 # HTTP Server setup
 PORT = 8000
@@ -76,12 +78,8 @@ def read_laser_sensor():
 
 def read_pir_sensor():
     time.sleep(0.05)
-    global laser_debounce_counter
-    # the laser sensor is active low
-    if(GPIO.input(PIR_SENSOR_PIN)==0):
-        print("PIR sensor returned 0")
-    if(GPIO.input(PIR_SENSOR_PIN)==1):
-        print("PIR sensor returned 1")
+    # the pir sensor is active high
+    return GPIO.input(PIR_SENSOR_PIN)
 
 def buzz(state):
     if state:
@@ -104,17 +102,49 @@ if __name__=="__main__":
         # check if evidence folder exists, if not create it
         if not os.path.exists(evidence_dir):
             os.makedirs(evidence_dir)
+            if not os.path.exists(os.path.join(evidence_dir,"photos")):
+                os.makedirs(os.path.join(evidence_dir,"photos"))
+            if not os.path.exists(os.path.join(evidence_dir,"videos")):
+                os.makedirs(os.path.join(evidence_dir,"videos"))
+        # Create a csv files to record the events
+        if not os.path.exists(os.path.join(evidence_dir,"events.csv")):
+            with open(os.path.join(evidence_dir,"events.csv"),'w') as f:
+                f.write("Timestamp, Laser, Pir, Image, Video\n")
+        event_file = open(os.path.join(evidence_dir,"events.csv"),'a')
         # Initialize system state and print startup message
         print("Laser detection started, Press Ctrl+C to stop.\n")
         # state var decides when buzz + camera should start/stop
         buzzer_state = 0
+        # state var decides when camera should start/stop
+        camera_state = 0
         # Start camera rolling
         _, frame = cap.read()
         # Execute the below code until ctrl+C is not pressed
         while True:
-            read_pir_sensor()
+            pir_sensor_value = read_pir_sensor()
             laser_sensor_value = read_laser_sensor()
-            print("laser sensor value is "+str(laser_sensor_value)+" buzzer state value "+str(buzzer_state)+"\n")
+            print("PIR sensor value is "+str(pir_sensor_value)+" camera state value is "+str(laser_sensor_value))
+            print("Laser sensor value is "+str(laser_sensor_value)+" buzzer state value "+str(buzzer_state))
+            
+            # when PIR sensor detects motion and camera is not capturing
+            # start camera capture stream
+            
+            if pir_sensor_value == 1 and camera_state == 0:
+                print("PIR sensor detected motion! Starting camera...\n")
+                # start camera capture stream
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                video_filename = os.path.join(evidence_dir+"/videos", f"video_{timestamp}.avi")
+                out = cv2.VideoWriter(video_filename, fourcc, fps, (frame_width, frame_height))
+                camera_state = 1
+            # when PIR sensor does not detect motion and camera is capturing
+            # stop camera capture stream
+            elif pir_sensor_value == 0 and camera_state == 1:
+                print("PIR sensor not detected motion! Stopping camera...\n")
+                # stop camera capture stream
+                out.release()
+                video_filename = None
+                camera_state = 0
+            
             # sensor detected line break and was not capturing/buzzing
             # start buzzing and capturing
             if laser_sensor_value == 0 and buzzer_state == 0:
@@ -123,8 +153,10 @@ if __name__=="__main__":
                 buzz(buzzer_state)
                 # prep camera output stream
                 timestamp =  time.strftime("%Y%m%d-%H%M%S")
-                filename = os.path.join(evidence_dir,f"suspect_{timestamp}.jpg")
-                cv2.imwrite(filename,frame)
+                image_filename = os.path.join(evidence_dir+"/photos",f"suspect_{timestamp}.jpg")
+                cv2.imwrite(image_filename,frame)
+                # record the event 
+                event_file.write(str(timestamp)+", 1, "+str(pir_sensor_value)+", "+image_filename+", "+video_filename+"\n")
             # sensor detected back laser but was capturing/buzzing
             # stop buzzing and capturing, write capture frames
             elif laser_sensor_value == 1 and buzzer_state == 1:
@@ -137,6 +169,9 @@ if __name__=="__main__":
         # cleanup GPIO
         GPIO.cleanup()
         print("GPIO cleaned up.")
+        # close event_file
+        event_file.close()
+        print("Event file closed.")
         # release camera resources
         cap.release()
         print("Camera released.")

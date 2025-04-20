@@ -63,7 +63,8 @@ def read_sensor():
         if(debounce_counter>10):
             value = 1
         # else return 0 meaning laser is not detected, until the debounce counter reaches the threashold
-        value = 0
+        else:
+            value = 0
     else:
         # reset the debounce counter if laser is not detected 
         debounce_counter = 0

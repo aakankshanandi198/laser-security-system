@@ -125,7 +125,7 @@ if __name__=="__main__":
             _, frame = cap.read()
             pir_sensor_value = read_pir_sensor()
             laser_sensor_value = read_laser_sensor()
-            print("PIR sensor value is "+str(pir_sensor_value)+" camera state value is "+str(laser_sensor_value))
+            print("PIR sensor value is "+str(pir_sensor_value)+" camera state value is "+str(camera_state))
             print("Laser sensor value is "+str(laser_sensor_value)+" buzzer state value "+str(buzzer_state))
             
             # when PIR sensor detects motion and camera is not capturing

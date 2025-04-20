@@ -111,6 +111,7 @@ if __name__=="__main__":
             with open(os.path.join(evidence_dir,"events.csv"),'w') as f:
                 f.write("Timestamp, Laser, Pir, Image, Video\n")
         event_file = open(os.path.join(evidence_dir,"events.csv"),'a')
+        video_filename = None
         # Initialize system state and print startup message
         print("Laser detection started, Press Ctrl+C to stop.\n")
         # state var decides when buzz + camera should start/stop
@@ -156,7 +157,7 @@ if __name__=="__main__":
                 image_filename = os.path.join(evidence_dir+"/photos",f"suspect_{timestamp}.jpg")
                 cv2.imwrite(image_filename,frame)
                 # record the event 
-                event_file.write(str(timestamp)+", 1, "+str(pir_sensor_value)+", "+image_filename+", "+video_filename+"\n")
+                event_file.write(str(timestamp)+", 1, "+str(pir_sensor_value)+", "+str(image_filename)+", "+str(video_filename)+"\n")
             # sensor detected back laser but was capturing/buzzing
             # stop buzzing and capturing, write capture frames
             elif laser_sensor_value == 1 and buzzer_state == 1:
